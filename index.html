@@ -154,7 +154,8 @@ $(document).ready(function () {
 </ol>
 <p>My hypoteses is that a larger number of customer service calls and total charge increase customer unsatisfaction and lead to churn. The longer length of account shows customer loyalty and probably decreases churn.</p>
 <p>The dataset “churn” is from UCI: <a href="http://www.sgi.com/tech/mlc/db/" class="uri">http://www.sgi.com/tech/mlc/db/</a> I haven’t done separate data wrangling file, because data transform in this case is fairly straight-forward.</p>
-<p>Dataset includes customer data with 5000 observations and 22 variables. I chose three variables that I would think to predict customer churn.</p>
+<p>Dataset includes customer data with 5000 observations and 22 variables. Probably it’s from telco industry where churn management is widely used. I chose three variables that I would think to predict customer churn.</p>
+<p>I’ll use logistic regression because target variable is binary. Customer either churns or stays.</p>
 <p>First, I’ll read the variable names</p>
 <pre class="r"><code># Load libraries
 library(ggplot2)
