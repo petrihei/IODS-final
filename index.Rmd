@@ -5,24 +5,121 @@ date: "3/8/2017"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+First, I'll read the variable names
+
+```{r}
+# Load libraries
+library(ggplot2)
+
+# load both the variable names file and the variable values file
+varNms = read.csv("http://www.sgi.com/tech/mlc/db/churn.names", skip=4, header=FALSE,
+               sep=":", colClasses=c("character", "NULL"))[[1]]
+
+print(varNms)
 ```
 
-## Temp
 
-Temporary text
+Next, I'll add variable values
 
-```{r cars}
-summary(cars)
+```{r}
+dt = read.csv("http://www.sgi.com/tech/mlc/db/churn.all", header=FALSE, col.names=c(varNms,"churn"))
+print(head(dt))
 ```
 
-## Including Plots
+Create churn variable
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+
+```{r}
+
+# recode churn variable into zeros and ones
+as.integer(as.logical(dt$churn))
+
+# create total charge columns
+dt$total.charge = dt$total.day.charge + dt$total.eve.charge + dt$total.night.charge + dt$total.intl.charge
+
+# create a train and test set with a sample of 75% of the 5000 records as train and 25% as test.
+set.seed(123)
+trainRows = sample(1:nrow(dt), 0.75*nrow(dt))
+tr_dt = dt[trainRows, ]
+te_dt = dt[-trainRows, ]
+
+
+# inspect data frame
+str(tr_dt)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+
+summary(tr_dt)
+
+```
+
+```{r}
+# Histogram of Number of Customer Service Calls
+qplot(number.customer.service.calls, data = tr_dt, geom="histogram", binwidth=1) +
+  labs(title = "Historgram of Number of Customer Service Calls") +
+  labs(x ="Number of Customer Service Calls") +
+  labs(y = "Frequency of Number of Accounts") +
+  scale_y_continuous(breaks = c(0,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300, 1400, 1500), minor_breaks = NULL) +
+  scale_x_continuous(breaks = c(0,1,2,3,4,5,6,7,8,9), minor_breaks = NULL) +
+   geom_vline(xintercept = mean(tr_dt$number.customer.service.calls), show.legend=TRUE, color="red", labels("average")) +
+  geom_vline(xintercept = median(tr_dt$number.customer.service.calls), show.legend=TRUE, color="blue", labels("Median"))
+```
+
+
+```{r}
+# Histogram of Account Length
+qplot(account.length, data = tr_dt, geom="histogram", binwidth=1) +
+  labs(title = "Histogram of Account Length") +
+  labs(x ="Account length, days") +
+  labs(y = "Frequency of Number of Accounts") +
+  scale_y_continuous(breaks = c(0,10,20,30,40,50,60,70), minor_breaks = NULL) +
+  scale_x_continuous(breaks = c(0,50,100,150,200,250,300), minor_breaks = NULL) +
+   geom_vline(xintercept = mean(tr_dt$account.length), show.legend=TRUE, color="red", labels("average")) +
+  geom_vline(xintercept = median(tr_dt$account.length), show.legend=TRUE, color="blue", labels("Median"))
+```
+
+
+
+```{r}
+# Histogram of Total Charge
+qplot(total.charge, data = tr_dt, geom="histogram", binwidth=1) +
+  labs(title = "Histogrram of Total Charge") +
+  labs(x ="Total Charge") +
+  labs(y = "Frequency of Number of Accounts") +
+  scale_y_continuous(breaks = c(0,25,50,75,100,125,150,175,200), minor_breaks = NULL) +
+  scale_x_continuous(breaks = c(0,25,50,75,100), minor_breaks = NULL) +
+   geom_vline(xintercept = mean(tr_dt$total.charge), show.legend=TRUE, color="red", labels("average")) +
+  geom_vline(xintercept = median(tr_dt$total.charge), show.legend=TRUE, color="blue", labels("Median"))
+
+
+```
+
+
+```{r}
+# find the model with glm()
+m <- glm(churn ~ number.customer.service.calls + account.length + total.charge, data = dt, family = "binomial")
+
+# print out a summary of the model
+summary(m)
+
+# print out the coefficients of the model
+coef(m) 
+```
+
+Seems that number of customer service calls and total charge are statistically significant variables. Account length is not. I'll drop it from the model.
+
+```{r}
+# find the model with glm()
+m <- glm(churn ~ number.customer.service.calls + total.charge, data = dt, family = "binomial")
+
+# print out a summary of the model
+summary(m)
+
+# print out the coefficients of the model
+coef(m) 
+```
+
