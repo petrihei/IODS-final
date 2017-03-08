@@ -1,10 +1,31 @@
 ---
-title: "index"
-author: "Petri Heinonen"
-date: "3/8/2017"
-output: html_document
+title: "IODS final project"
+author: Petri Heinonen
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 2
+    fig_caption: true
+    fig_width: 6
+    fig_height: 4
+    code_folding: hide
 ---
 
+# # Logistic Regression Churn Modeling
+
+In this last assignment, I'll build a simple churn model with logistic regression. I'll build the model with three variables:
+
+1. The number of customer service calls
+2. The length of account in days
+3. The total charge
+
+My hypoteses is that a larger number of customer service calls and total charge increase customer unsatisfaction and lead to churn. The longer length of account shows customer loyalty and probably decreases churn.
+
+The dataset "churn" is from UCI: http://www.sgi.com/tech/mlc/db/
+I haven't done separate data wrangling file, because data transform in this case is fairly straight-forward.
+
+Dataset includes customer data with 5000 observations and 22 variables. I chose three variables that I would think to predict customer churn.
 
 First, I'll read the variable names
 
@@ -27,9 +48,7 @@ dt = read.csv("http://www.sgi.com/tech/mlc/db/churn.all", header=FALSE, col.name
 print(head(dt))
 ```
 
-Create churn variable
-
-
+Next, I'll create summary variable of total charge. I'll also change the datatype of churn variable from logical to integer. This allows me to find logistic regression model later.
 
 
 ```{r}
@@ -40,64 +59,65 @@ as.integer(as.logical(dt$churn))
 # create total charge columns
 dt$total.charge = dt$total.day.charge + dt$total.eve.charge + dt$total.night.charge + dt$total.intl.charge
 
-# create a train and test set with a sample of 75% of the 5000 records as train and 25% as test.
-set.seed(123)
-trainRows = sample(1:nrow(dt), 0.75*nrow(dt))
-tr_dt = dt[trainRows, ]
-te_dt = dt[-trainRows, ]
-
 
 # inspect data frame
-str(tr_dt)
+str(dt)
 ```
 
 ```{r}
 
-summary(tr_dt)
+summary(dt)
 
 ```
+
+Seems that most people (4293 of 5000) haven't churned. Customer service calls vary from zero to nine. Everybody has total charge less than 100.
+
+Next, I'll check the variable distributions with histograms.
 
 ```{r}
 # Histogram of Number of Customer Service Calls
-qplot(number.customer.service.calls, data = tr_dt, geom="histogram", binwidth=1) +
-  labs(title = "Historgram of Number of Customer Service Calls") +
+qplot(number.customer.service.calls, data = dt, geom="histogram", binwidth=1) +
+  labs(title = "Histogram of Number of Customer Service Calls") +
   labs(x ="Number of Customer Service Calls") +
   labs(y = "Frequency of Number of Accounts") +
   scale_y_continuous(breaks = c(0,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300, 1400, 1500), minor_breaks = NULL) +
   scale_x_continuous(breaks = c(0,1,2,3,4,5,6,7,8,9), minor_breaks = NULL) +
-   geom_vline(xintercept = mean(tr_dt$number.customer.service.calls), show.legend=TRUE, color="red", labels("average")) +
-  geom_vline(xintercept = median(tr_dt$number.customer.service.calls), show.legend=TRUE, color="blue", labels("Median"))
+   geom_vline(xintercept = mean(dt$number.customer.service.calls), show.legend=TRUE, color="red", labels("average")) +
+  geom_vline(xintercept = median(dt$number.customer.service.calls), show.legend=TRUE, color="blue", labels("Median"))
 ```
 
+The distribution of the number of customer service calls is far from normally distributed. It's very right skewed. Most customers only call few times to customer service.
 
 ```{r}
 # Histogram of Account Length
-qplot(account.length, data = tr_dt, geom="histogram", binwidth=1) +
+qplot(account.length, data = dt, geom="histogram", binwidth=1) +
   labs(title = "Histogram of Account Length") +
   labs(x ="Account length, days") +
   labs(y = "Frequency of Number of Accounts") +
   scale_y_continuous(breaks = c(0,10,20,30,40,50,60,70), minor_breaks = NULL) +
   scale_x_continuous(breaks = c(0,50,100,150,200,250,300), minor_breaks = NULL) +
-   geom_vline(xintercept = mean(tr_dt$account.length), show.legend=TRUE, color="red", labels("average")) +
-  geom_vline(xintercept = median(tr_dt$account.length), show.legend=TRUE, color="blue", labels("Median"))
+   geom_vline(xintercept = mean(dt$account.length), show.legend=TRUE, color="red", labels("average")) +
+  geom_vline(xintercept = median(dt$account.length), show.legend=TRUE, color="blue", labels("Median"))
 ```
-
 
 
 ```{r}
 # Histogram of Total Charge
-qplot(total.charge, data = tr_dt, geom="histogram", binwidth=1) +
-  labs(title = "Histogrram of Total Charge") +
+qplot(total.charge, data = dt, geom="histogram", binwidth=1) +
+  labs(title = "Histogram of Total Charge") +
   labs(x ="Total Charge") +
   labs(y = "Frequency of Number of Accounts") +
   scale_y_continuous(breaks = c(0,25,50,75,100,125,150,175,200), minor_breaks = NULL) +
   scale_x_continuous(breaks = c(0,25,50,75,100), minor_breaks = NULL) +
-   geom_vline(xintercept = mean(tr_dt$total.charge), show.legend=TRUE, color="red", labels("average")) +
-  geom_vline(xintercept = median(tr_dt$total.charge), show.legend=TRUE, color="blue", labels("Median"))
+   geom_vline(xintercept = mean(dt$total.charge), show.legend=TRUE, color="red", labels("average")) +
+  geom_vline(xintercept = median(dt$total.charge), show.legend=TRUE, color="blue", labels("Median"))
 
 
 ```
 
+Account length and total charge are close to normally distributed. Customers seem to vary from very short-term to loyalists and bills vary from very small to substantial.
+
+Next, it's time to do some logistic regression modeling.
 
 ```{r}
 # find the model with glm()
@@ -122,4 +142,34 @@ summary(m)
 # print out the coefficients of the model
 coef(m) 
 ```
+Explanatory variables have very low p-values. We can be somewhat confident that there is an association between number of customer service calls and total charge with the probability of churn.
 
+Coefficients tell that for one unit increase in customer service calls, the log odds for churn increase 0.452. For one unit increase in total charge, the log odds for churn increase 0.075.
+
+Let's check the confidence intervals.
+
+```{r}
+confint(m)
+```
+
+As a last thing, I'll test how well the model predicts.
+
+```{r}
+library(dplyr)
+
+# predict() the probability of churn
+probabilities <- predict(m, type = "response")
+
+# add the predicted probabilities to 'dt'
+dt <- mutate(dt, probability = probabilities)
+
+# use the probabilities to make a prediction of churn
+dt <- mutate(dt, prediction = probability > 0.5)
+
+# tabulate the target variable versus the predictions
+table(churn = dt$churn, prediction = dt$prediction)
+```
+
+In churn modeling, we are foremost interested about how well the model predicts who's going to churn. In this case, model predicted churn in 50 cases that did churn. In 657 observations, model suggested not-churn, but the result was churn. This isn't a good model to predict the churn. 
+
+Overall, I wouldn't use this model to predict churn. Seems that the model is too "cautious" and predicts only small fraction of customers to churn when in reality the churn rate is much higher.
